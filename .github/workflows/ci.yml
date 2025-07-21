@@ -42,42 +42,16 @@ jobs:
       - name: Test
         run: make test
 
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Install dependencies
-        run: |
-          go mod tidy
-          go get github.com/stretchr/testify
-
-      - name: Install golangci-lint
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${{ env.GOLANGCI_LINT_VERSION }}
-
-      - name: Lint
-        run: make lint
-
-      - name: Code format
-        run: |
-          if [ -f style.sh ]; then bash style.sh; fi
-
-      - name: Build binaries (multi-platform)
+      - name: Build binaries
+        if: startsWith(github.ref, 'refs/tags/v')
         run: make build-binaries
 
       - name: Package binaries
+        if: startsWith(github.ref, 'refs/tags/v')
         run: make package-binaries
 
       - name: Upload Binaries
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: binaries
@@ -85,10 +59,25 @@ jobs:
             dist/*.tar.gz
             dist/*.zip
 
-      - name: Create GitHub Release
+  release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+
+      - name: List Downloaded Files
+        run: ls -l
+
+      - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: dist/*
+          artifacts: "*.tar.gz,*.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
