@@ -77,6 +77,14 @@ jobs:
       - name: Package binaries
         run: make package-binaries
 
+      - name: Upload Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:

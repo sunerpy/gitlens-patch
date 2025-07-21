@@ -2,8 +2,8 @@
 IMAGE_NAME = gitlens-patch
 DIST_DIR = dist
 PLATFORMS = linux/amd64 linux/arm64 windows/amd64 windows/arm64
-TAG ?= dev
-
+GIT_TAG=$(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+TAG ?= $(GIT_TAG)
 .PHONY: test test-all build-local build-binaries package-binaries clean lint code-format
 
 # 单元测试
@@ -27,6 +27,7 @@ build-local:
 # 多平台构建
 build-binaries:
 	@echo "Building binaries for platforms: $(PLATFORMS)"
+	@mkdir -p $(DIST_DIR)
 	for platform in $(PLATFORMS); do \
 		GOOS=$$(echo $$platform | cut -d/ -f1); \
 		GOARCH=$$(echo $$platform | cut -d/ -f2); \
@@ -39,13 +40,16 @@ build-binaries:
 # 打包产物
 package-binaries:
 	@echo "Packaging binaries into tar.gz/zip archives"
-	for file in $(DIST_DIR)/$(IMAGE_NAME)-*; do \
-		if [[ $$file == *.exe ]]; then \
-			zip -j $(DIST_DIR)/$$(basename $$file)-$(TAG).zip $$file; \
-		else \
-			tar -czvf $(DIST_DIR)/$$(basename $$file)-$(TAG).tar.gz -C $(DIST_DIR) $$(basename $$file); \
-		fi; \
+	@mkdir -p $(DIST_DIR)
+	@for file in $(DIST_DIR)/$(IMAGE_NAME)-*; do \
+		case "$$file" in \
+			*.exe) \
+				zip -j $(DIST_DIR)/$$(basename $$file)-$(TAG).zip $$file ;; \
+			*) \
+				tar -czvf $(DIST_DIR)/$$(basename $$file)-$(TAG).tar.gz -C $(DIST_DIR) $$(basename $$file) ;; \
+		esac; \
 	done
+
 
 # Lint 检查
 .PHONY: lint
